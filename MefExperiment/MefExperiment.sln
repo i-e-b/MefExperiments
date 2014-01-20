@@ -16,7 +16,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Simple plugin and IoC demo"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Live plugin experiment", "Live plugin experiment", "{F1A186E6-C782-49B6-8407-019DDE8B7C50}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PluginWatcher", "PluginWatcher\PluginWatcher.csproj", "{902F3361-4850-4CCD-BA29-12EAEF0D0E91}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PluginWatcher.App", "PluginWatcher\PluginWatcher.App.csproj", "{902F3361-4850-4CCD-BA29-12EAEF0D0E91}"
 	ProjectSection(ProjectDependencies) = postProject
 		{FF450695-DA06-4DD1-B215-B4398940CC45} = {FF450695-DA06-4DD1-B215-B4398940CC45}
 	EndProjectSection

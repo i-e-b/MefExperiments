@@ -42,7 +42,6 @@
     <Compile Include="Implementations\DemoDataSource.cs" />
     <Compile Include="DemoInstance.cs" />
     <Compile Include="Contracts\IDemoDataSource.cs" />
-    <Compile Include="Contracts\PartsContainer.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

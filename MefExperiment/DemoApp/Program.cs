@@ -2,26 +2,40 @@
 using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
 using System.Reflection;
-using DemoApp.Contracts;
 
 namespace DemoApp
 {
-    class Program
+    public class Program
     {
-        static void Main(string[] args)
+        /// <summary>
+        /// MEF Bootstrap (MEF comes from System.ComponentModel.Composition in the GAC).
+        /// <para>This will return a class containing all the application's aggregate roots.</para>
+        /// </summary>
+        public static ComposedDemoProgram Configure()
         {
-            // MEF Bootstrap (MEF comes from System.ComponentModel.Composition in the GAC)
             using (var catalog = new AssemblyCatalog(Assembly.GetExecutingAssembly()))
             {
                 var container = new CompositionContainer(catalog);
 
-                var parts = new PartsContainer();
-                container.SatisfyImportsOnce(parts);
+                var composedProgram = new ComposedDemoProgram();
+                container.SatisfyImportsOnce(composedProgram);
 
-                var instance = new DemoInstance(parts);
-
-                instance.GoDoStuff();
+                return composedProgram;
             }
+        }
+
+        /// <summary>
+        /// poco container for the program's agregate roots (entry points to behaviours)
+        /// </summary>
+        public class ComposedDemoProgram
+        {
+            [Import]
+            public DemoInstance Instance { get; set; } // this demands an IDemoDataSource
+        }
+
+        static void Main()
+        {
+            Configure().Instance.GoDoStuff();
 
             Console.WriteLine("Done. Press [enter]");
             Console.ReadKey();

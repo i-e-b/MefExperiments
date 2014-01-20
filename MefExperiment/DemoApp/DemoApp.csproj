@@ -39,16 +39,29 @@
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ComposedDemoProgram.cs" />
+    <Compile Include="Implementations\QuietConsoleOutput.cs" />
     <Compile Include="Implementations\DemoDataSource.cs" />
-    <Compile Include="DemoInstance.cs" />
-    <Compile Include="Contracts\IDemoDataSource.cs" />
+    <Compile Include="Roots\DemoInstance.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DemoApp.Contracts\DemoApp.Contracts.csproj">
+      <Project>{D654AE15-05E0-4E39-A20A-9B6F74E69C52}</Project>
+      <Name>DemoApp.Contracts</Name>
+    </ProjectReference>
+  </ItemGroup>
   <ItemGroup />
+  <ItemGroup>
+    <Content Include="..\DemoAppPlugins\bin\DemoAppPlugins.dll">
+      <Link>Plugins\DemoAppPlugins.dll</Link>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

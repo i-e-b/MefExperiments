@@ -1,8 +1,8 @@
-﻿using System;
+﻿using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using DemoApp.Contracts;
 
-namespace DemoApp
+namespace DemoApp.Roots
 {
     /// <summary>
     /// This is a self-exporting class. It allows you to define a root class that MEF will fully
@@ -13,16 +13,24 @@ namespace DemoApp
     public class DemoInstance
     {
         public readonly IDemoDataSource DataSource;
+        public readonly IEnumerable<IOutput> Outputs;
 
         [ImportingConstructor]
-        public DemoInstance(IDemoDataSource dataSource)
+        public DemoInstance(
+            IDemoDataSource dataSource,                                 // single dependencies don't need any decoration
+            [ImportMany(typeof(IOutput))]IEnumerable<IOutput> outputs   // group dependencies must be marked as ImportManyAttribute
+            )
         {
             DataSource = dataSource;
+            Outputs = outputs;
         }
 
         public void GoDoStuff()
         {
-            Console.WriteLine(string.Join(", ", DataSource.GetData(1)));
+            foreach (var output in Outputs)
+            {
+                output.Write(string.Join(", ", DataSource.GetData(1)));
+            }
         }
     }
 }

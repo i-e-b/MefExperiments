@@ -1,6 +1,8 @@
 ﻿using System;
 using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
+using System.ComponentModel.Composition.Primitives;
+using System.Linq;
 using System.Reflection;
 
 namespace DemoApp
@@ -11,9 +13,14 @@ namespace DemoApp
         /// MEF Bootstrap (MEF comes from System.ComponentModel.Composition in the GAC).
         /// <para>This will return a class containing all the application's aggregate roots.</para>
         /// </summary>
-        public static ComposedDemoProgram Configure()
+        public static ComposedDemoProgram Configure(params string[] pluginDirectories)
         {
-            using (var catalog = new AssemblyCatalog(Assembly.GetExecutingAssembly()))
+            var catalogues = 
+                pluginDirectories.Select<string, ComposablePartCatalog>(d=>new DirectoryCatalog(d)).
+                Concat(new []{new AssemblyCatalog(Assembly.GetExecutingAssembly())}).ToList();
+
+            var catalog = new AggregateCatalog(catalogues);
+            try
             {
                 var container = new CompositionContainer(catalog);
 
@@ -22,20 +29,20 @@ namespace DemoApp
 
                 return composedProgram;
             }
+            finally
+            {
+                catalog.Dispose();
+                foreach (var cat in catalogues)
+                {
+                    cat.Dispose();
+                }
+            }
         }
 
-        /// <summary>
-        /// poco container for the program's agregate roots (entry points to behaviours)
-        /// </summary>
-        public class ComposedDemoProgram
-        {
-            [Import]
-            public DemoInstance Instance { get; set; } // this demands an IDemoDataSource
-        }
 
         static void Main()
         {
-            Configure().Instance.GoDoStuff();
+            Configure("./Plugins").Instance.GoDoStuff();
 
             Console.WriteLine("Done. Press [enter]");
             Console.ReadKey();

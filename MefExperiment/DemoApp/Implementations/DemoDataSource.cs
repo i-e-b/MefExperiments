@@ -9,7 +9,7 @@ namespace DemoApp.Implementations
     {
         public IEnumerable<string> GetData(int id)
         {
-            return new[] { "one", "two", "three" };
+            return new[] { "One", "Two", "Three" };
         }
     }
 }

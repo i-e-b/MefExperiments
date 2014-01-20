@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Threading;
+using PluginWatcher.Contracts;
 
 namespace PluginWatcher
 {
@@ -10,7 +11,7 @@ namespace PluginWatcher
         {
             Console.WriteLine("As plugins are added and removed, you should see output below. Press [enter] to exit");
 
-            var watcher = new PluginWatcher("./Plugins");
+            var watcher = new PluginWatcher<IWatchablePlugin>("./Plugins");
             watcher.PluginsChanged += watcher_PluginsChanged;
 
 
@@ -27,7 +28,7 @@ namespace PluginWatcher
             while (Console.ReadKey().Key != ConsoleKey.Enter);
         }
 
-        static void watcher_PluginsChanged(object sender, PluginsChangedEventArgs e)
+        static void watcher_PluginsChanged(object sender, PluginsChangedEventArgs<IWatchablePlugin> e)
         {
             Console.WriteLine("\r\nPlugins reloaded:");
             Console.WriteLine(string.Join(", ", e.AvailablePlugins.Select(p => p.Name())));

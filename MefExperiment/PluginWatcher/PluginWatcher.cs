@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
-using PluginWatcher.Contracts;
 
 namespace PluginWatcher
 {
@@ -22,13 +21,9 @@ namespace PluginWatcher
     /// A file system watcher waits for *.dll changes in the target directory. On each change, the DirectoryCatalog will be refreshed.
     /// That triggers `ExportsChanged`, which may flag `_reload`. If reload is set to true, the update thread will recompose the list of plugins.
     /// </remarks>
-    public class PluginWatcher : IDisposable
+    public class PluginWatcher<T> : IDisposable
     {
-        [ImportMany(typeof(IWatchablePlugin), AllowRecomposition = true)]
-        protected IEnumerable<IWatchablePlugin> Plugins { get; set; }
-
-
-        private static readonly object CompositionLock = new object();
+        private readonly object _compositionLock = new object();
         private volatile bool _reload;
         private volatile bool _running;
 
@@ -37,12 +32,12 @@ namespace PluginWatcher
         private Thread _updateThread;
         private DirectoryCatalog _pluginCatalog;
 
-        public event EventHandler<PluginsChangedEventArgs> PluginsChanged;
+        public event EventHandler<PluginsChangedEventArgs<T>> PluginsChanged;
 
         protected virtual void OnPluginsChanged()
         {
             var handler = PluginsChanged;
-            if (handler != null) handler(this, new PluginsChangedEventArgs { AvailablePlugins = CurrentlyAvailable });
+            if (handler != null) handler(this, new PluginsChangedEventArgs<T> { AvailablePlugins = CurrentlyAvailable });
         }
 
         public PluginWatcher(string pluginDirectory)
@@ -50,7 +45,7 @@ namespace PluginWatcher
             _pluginDirectory = pluginDirectory;
             if (!Directory.Exists(_pluginDirectory)) throw new Exception("Can't watch \"" + _pluginDirectory + "\", might not exist or not enough permissions");
 
-            CurrentlyAvailable = new IWatchablePlugin[0];
+            CurrentlyAvailable = new T[0];
             _fsw = new FileSystemWatcher(_pluginDirectory, "*.dll");
             SetupFileWatcher();
 
@@ -80,12 +75,11 @@ namespace PluginWatcher
 
                         while (_running)
                         {
-                            lock (CompositionLock)
+                            lock (_compositionLock)
                             {
                                 if (_reload)
                                 {
-                                    container.ComposeParts(this);
-                                    CurrentlyAvailable = (Plugins ?? new IWatchablePlugin[0]).ToArray();
+                                    CurrentlyAvailable = container.GetExports<T>().Select(y => y.Value).ToArray();
 
                                     _reload = false;
                                     OnPluginsChanged();
@@ -98,7 +92,7 @@ namespace PluginWatcher
             }
             finally
             {
-                lock (CompositionLock)
+                lock (_compositionLock)
                 {
                     var cat = Interlocked.Exchange(ref _pluginCatalog, null);
                     if (cat != null) cat.Dispose();
@@ -122,7 +116,7 @@ namespace PluginWatcher
 
         private void ExportsChanged(object sender, ExportsChangeEventArgs e)
         {
-            lock (CompositionLock)
+            lock (_compositionLock)
             {
                 // if anything changed, trigger a rebuild (can't do it on the event thread)
                 if (e.AddedExports.Any() || e.RemovedExports.Any()) _reload = true;
@@ -145,7 +139,7 @@ namespace PluginWatcher
             {
                 var cat = _pluginCatalog;
                 if (cat == null) { return; }
-                lock (CompositionLock)
+                lock (_compositionLock)
                 {
                     cat.Refresh();
                 }
@@ -156,7 +150,7 @@ namespace PluginWatcher
             }
         }
 
-        public IEnumerable<IWatchablePlugin> CurrentlyAvailable { get; protected set; }
+        public IEnumerable<T> CurrentlyAvailable { get; protected set; }
 
         public void Dispose()
         {
@@ -178,8 +172,8 @@ namespace PluginWatcher
         }
     }
 
-    public class PluginsChangedEventArgs: EventArgs
+    public class PluginsChangedEventArgs<T>: EventArgs
     {
-        public IEnumerable<IWatchablePlugin> AvailablePlugins { get; set; }
+        public IEnumerable<T> AvailablePlugins { get; set; }
     }
 }

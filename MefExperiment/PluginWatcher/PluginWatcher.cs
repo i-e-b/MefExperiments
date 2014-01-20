@@ -10,27 +10,48 @@ using System.Threading;
 namespace PluginWatcher
 {
     /// <summary>
-    /// Watches for a fixed kind of plugin
+    /// Watch for changes to a plugin directory for a specific MEF Import type.
+    /// <para>Keeps a list of last seen exports and exposes a change event</para>
     /// </summary>
-    /// <remarks>
-    /// The mix of attributes, exceptions, thread safety problems and odd workflow makes this 
-    /// behaviour very tricky to implement, and full of gotchas.
-    /// Every weird implementation detail below is the result of trial-and-error.
-    /// Change it at your peril.
-    /// <para>How it works:</para>
-    /// A file system watcher waits for *.dll changes in the target directory. On each change, the DirectoryCatalog will be refreshed.
-    /// That triggers `ExportsChanged`, which may flag `_reload`. If reload is set to true, the update thread will recompose the list of plugins.
-    /// </remarks>
-    public class PluginWatcher<T> : IDisposable
+    /// <typeparam name="T">Plugin type. Plugins should contain classes implementing this type and decorated with [Export(typeof(...))]</typeparam>
+    public interface IPluginWatcher<T> : IDisposable
+    {
+        /// <summary>
+        /// Available Exports matching type <typeparamref name="T"/> have changed
+        /// </summary>
+        event EventHandler<PluginsChangedEventArgs<T>> PluginsChanged;
+
+        /// <summary>
+        /// Last known Exports matching type <typeparamref name="T"/>.
+        /// </summary>
+        IEnumerable<T> CurrentlyAvailable { get; }
+    }
+
+    /// <summary>
+    /// Event arguments relating to a change in available MEF Export types.
+    /// </summary>
+    public class PluginsChangedEventArgs<T>: EventArgs
+    {
+        /// <summary>
+        /// Last known Exports matching type <typeparamref name="T"/>.
+        /// </summary>
+        public IEnumerable<T> AvailablePlugins { get; set; }
+    }
+
+    /// <summary>
+    /// Watch for changes to a plugin directory for a specific MEF Import type.
+    /// <para>Keeps a list of last seen exports and exposes a change event</para>
+    /// </summary>
+    /// <typeparam name="T">Plugin type. Plugins should contain classes implementing this type and decorated with [Export(typeof(...))]</typeparam>
+    public class PluginWatcher<T> : IPluginWatcher<T>
     {
         private readonly object _compositionLock = new object();
-        private volatile bool _reload;
-        private volatile bool _running;
 
-        private readonly string _pluginDirectory;
         private FileSystemWatcher _fsw;
-        private Thread _updateThread;
         private DirectoryCatalog _pluginCatalog;
+        private CompositionContainer _container;
+        private AssemblyCatalog _localCatalog;
+        private AggregateCatalog _catalog;
 
         public event EventHandler<PluginsChangedEventArgs<T>> PluginsChanged;
 
@@ -42,62 +63,29 @@ namespace PluginWatcher
 
         public PluginWatcher(string pluginDirectory)
         {
-            _pluginDirectory = pluginDirectory;
-            if (!Directory.Exists(_pluginDirectory)) throw new Exception("Can't watch \"" + _pluginDirectory + "\", might not exist or not enough permissions");
+            if (!Directory.Exists(pluginDirectory)) throw new Exception("Can't watch \"" + pluginDirectory + "\", might not exist or not enough permissions");
 
             CurrentlyAvailable = new T[0];
-            _fsw = new FileSystemWatcher(_pluginDirectory, "*.dll");
+            _fsw = new FileSystemWatcher(pluginDirectory, "*.dll");
             SetupFileWatcher();
 
-            _reload = true;
-            _running = true;
-
-            _updateThread = new Thread(UpdateThreadLoop) { IsBackground = true };
-            _updateThread.Start();
-
-            while (_reload) { Thread.Sleep(100); }
-        }
-
-        private void UpdateThreadLoop()
-        {
-            _pluginCatalog = new DirectoryCatalog("./Plugins");
             try
             {
-                using (var localCatalog = new AssemblyCatalog(Assembly.GetExecutingAssembly()))
-                using (var catalog = new AggregateCatalog())
-                {
-                    catalog.Catalogs.Add(localCatalog);
-                    catalog.Catalogs.Add(_pluginCatalog);
-
-                    using (var container = new CompositionContainer(catalog, false))
-                    {
-                        container.ExportsChanged += ExportsChanged;
-
-                        while (_running)
-                        {
-                            lock (_compositionLock)
-                            {
-                                if (_reload)
-                                {
-                                    CurrentlyAvailable = container.GetExports<T>().Select(y => y.Value).ToArray();
-
-                                    _reload = false;
-                                    OnPluginsChanged();
-                                }
-                            }
-                            while (_running && !_reload) Thread.Sleep(1000);
-                        }
-                    }
-                }
+                _pluginCatalog = new DirectoryCatalog(pluginDirectory);
+                _localCatalog = new AssemblyCatalog(Assembly.GetExecutingAssembly());
+                _catalog = new AggregateCatalog();
+                _catalog.Catalogs.Add(_localCatalog);
+                _catalog.Catalogs.Add(_pluginCatalog);
+                _container = new CompositionContainer(_catalog, false);
+                _container.ExportsChanged += ExportsChanged;
             }
-            finally
+            catch
             {
-                lock (_compositionLock)
-                {
-                    var cat = Interlocked.Exchange(ref _pluginCatalog, null);
-                    if (cat != null) cat.Dispose();
-                }
+                Dispose(true);
+                throw;
             }
+
+            ReadLoadedPlugins();
         }
 
         private void SetupFileWatcher()
@@ -113,14 +101,18 @@ namespace PluginWatcher
             _fsw.EnableRaisingEvents = true;
         }
 
-
         private void ExportsChanged(object sender, ExportsChangeEventArgs e)
         {
             lock (_compositionLock)
             {
-                // if anything changed, trigger a rebuild (can't do it on the event thread)
-                if (e.AddedExports.Any() || e.RemovedExports.Any()) _reload = true;
+                if (e.AddedExports.Any() || e.RemovedExports.Any()) ReadLoadedPlugins();
             }
+        }
+
+        private void ReadLoadedPlugins()
+        {
+            CurrentlyAvailable = _container.GetExports<T>().Select(y => y.Value).ToArray();
+            OnPluginsChanged();
         }
 
         private void FileRenamed(object sender, RenamedEventArgs e)
@@ -152,6 +144,10 @@ namespace PluginWatcher
 
         public IEnumerable<T> CurrentlyAvailable { get; protected set; }
 
+        ~PluginWatcher()
+        {
+            Dispose(true);
+        }
         public void Dispose()
         {
             Dispose(true);
@@ -160,20 +156,22 @@ namespace PluginWatcher
         protected void Dispose(bool disposing)
         {
             if (!disposing) return;
-            _running = false;
+
             var fsw = Interlocked.Exchange(ref _fsw, null);
             if (fsw != null) fsw.Dispose();
 
-            var thread = Interlocked.Exchange(ref _updateThread, null);
-            if (thread != null)
-            {
-                thread.Join(2000);
-            }
+            var plg = Interlocked.Exchange(ref _pluginCatalog, null);
+            if (plg != null) plg.Dispose();
+
+            var con = Interlocked.Exchange(ref _container, null);
+            if (con != null) con.Dispose();
+
+            var loc = Interlocked.Exchange(ref _localCatalog, null);
+            if (loc != null) loc.Dispose();
+
+            var cat = Interlocked.Exchange(ref _catalog, null);
+            if (cat != null) cat.Dispose();
         }
     }
 
-    public class PluginsChangedEventArgs<T>: EventArgs
-    {
-        public IEnumerable<T> AvailablePlugins { get; set; }
-    }
 }

@@ -11,7 +11,7 @@ namespace PluginWatcher
         {
             Console.WriteLine("As plugins are added and removed, you should see output below. Press [enter] to exit");
 
-            var watcher = new PluginWatcher<IWatchablePlugin>("./Plugins");
+            IPluginWatcher<IWatchablePlugin> watcher = new PluginWatcher<IWatchablePlugin>("./Plugins");
             watcher.PluginsChanged += watcher_PluginsChanged;
 
 

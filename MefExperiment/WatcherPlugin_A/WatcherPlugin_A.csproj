@@ -4,63 +4,45 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{5D7EE27E-4049-4368-AC01-2BF7AE3F9FB2}</ProjectGuid>
-    <OutputType>Exe</OutputType>
+    <ProjectGuid>{FF450695-DA06-4DD1-B215-B4398940CC45}</ProjectGuid>
+    <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>DemoApp</RootNamespace>
-    <AssemblyName>DemoApp</AssemblyName>
+    <RootNamespace>WatcherPlugin_A</RootNamespace>
+    <AssemblyName>WatcherPlugin_A</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
+    <OutputPath>bin\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
+    <OutputPath>bin\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework, Version=10.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
-    <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ComposedDemoProgram.cs" />
-    <Compile Include="Implementations\QuietConsoleOutput.cs" />
-    <Compile Include="Implementations\DemoDataSource.cs" />
-    <Compile Include="Roots\DemoInstance.cs" />
-    <Compile Include="Program.cs" />
+    <Compile Include="PluginA.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="App.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\DemoApp.Contracts\DemoApp.Contracts.csproj">
-      <Project>{D654AE15-05E0-4E39-A20A-9B6F74E69C52}</Project>
-      <Name>DemoApp.Contracts</Name>
+    <ProjectReference Include="..\PluginWatcher.Contracts\PluginWatcher.Contracts.csproj">
+      <Project>{87C2EFDD-F1C7-47AF-9762-F5E77914D484}</Project>
+      <Name>PluginWatcher.Contracts</Name>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup />
-  <ItemGroup>
-    <None Include="..\DemoAppPlugins\bin\DemoAppPlugins.dll">
-      <Link>Plugins\DemoAppPlugins.dll</Link>
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

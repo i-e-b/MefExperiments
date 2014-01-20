@@ -10,22 +10,21 @@ namespace PluginWatcher
     public class Program
     {
         private static CompositionContainer _container;
-        private static readonly object _lock = new object();
-        private static DirectoryCatalog _pluginCatalog;
-        private static AssemblyCatalog _localCatalog;
+        private static readonly object CompositionLock = new object();
         private static bool _reload;
+        private static PluginContainer _loadedPlugins;
 
 
         static void Main()
         {
             Console.WriteLine("As plugins are added and removed, you should see output below. Press [enter] to exit");
 
-            _pluginCatalog = new DirectoryCatalog("./Plugins");
-            _localCatalog = new AssemblyCatalog(Assembly.GetExecutingAssembly());
+            var pluginCatalog = new DirectoryCatalog("./Plugins");
+            var localCatalog = new AssemblyCatalog(Assembly.GetExecutingAssembly());
 
             var catalog = new AggregateCatalog();
-            catalog.Catalogs.Add(_localCatalog);
-            catalog.Catalogs.Add(_pluginCatalog);
+            catalog.Catalogs.Add(localCatalog);
+            catalog.Catalogs.Add(pluginCatalog);
 
             _container = new CompositionContainer(catalog, false);
             _container.ExportsChanged += ExportsChanged;
@@ -38,12 +37,12 @@ namespace PluginWatcher
                 {
                     while (!Console.KeyAvailable)
                     {
-                        lock (_lock)
+                        lock (CompositionLock)
                         {
                             Thread.Sleep(200);
                             try
                             {
-                                _pluginCatalog.Refresh();
+                                pluginCatalog.Refresh();
                             }
                             catch (ChangeRejectedException rejex)
                             {
@@ -51,7 +50,7 @@ namespace PluginWatcher
                             }
                         }
 
-                        lock (_lock)
+                        lock (CompositionLock)
                         {
                             if (_reload)
                             {
@@ -66,8 +65,8 @@ namespace PluginWatcher
             }
             finally
             {
-                _pluginCatalog.Dispose();
-                _localCatalog.Dispose();
+                pluginCatalog.Dispose();
+                localCatalog.Dispose();
                 catalog.Dispose();
                 _container.Dispose();
             }
@@ -75,22 +74,21 @@ namespace PluginWatcher
 
         static void ExportsChanged(object sender, ExportsChangeEventArgs e)
         {
-            lock (_lock)
+            lock (CompositionLock)
             {
-                if (e.AddedExports.Any() || e.RemovedExports.Any())
-                    _reload = true;
+                if (e.AddedExports.Any() || e.RemovedExports.Any()) _reload = true;
             }
         }
 
         private static void ListKnownPlugins()
         {
-            var loaded = new PluginContainer();
-            lock (_lock)
+            _loadedPlugins = new PluginContainer();
+            lock (CompositionLock)
             {
-                _container.ComposeParts(loaded);
+                _container.ComposeParts(_loadedPlugins);
             }
             Console.WriteLine("\r\nPlugins reloaded:");
-            Console.WriteLine(string.Join(", ", loaded.Plugins.Select(p => p.Name())));
+            Console.WriteLine(string.Join(", ", _loadedPlugins.Plugins.Select(p => p.Name())));
         }
     }
 }

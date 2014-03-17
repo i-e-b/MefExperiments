@@ -1,13 +1,14 @@
 MEF Experiments
 ===============
 
-A few quick demo projects showing Dependency injection and run-time dynamic plugins using MEF.
+A few quick demo projects showing Dependency injection, run-time dynamic plugins, and code hot-swapping using MEF.
+http://msdn.microsoft.com/en-us/library/dd460648(v=vs.110).aspx
 
-* Plugin watcher
+* **Plugin watcher**
   
   A utility class to watch folders for changing plugins of a specific type
 
-* Simple plugin and IoC demo
+* **Simple plugin and IoC demo**
   
   Shows basic use of contract interfaces, plugin implementations, unit testing and
   a simple composed application to bring it all together.
@@ -17,7 +18,7 @@ A few quick demo projects showing Dependency injection and run-time dynamic plug
   * DemoApp.Unit.Tests
   * DemoAppPlugins
 
-* Live plugin updates
+* **Live plugin updates**
   
   Using the PluginWatcher to add and remove implementations at run time
 
@@ -25,7 +26,7 @@ A few quick demo projects showing Dependency injection and run-time dynamic plug
   * PluginWatcher.Contracts
   * WatcherPlugin_A
 
-* Hot code-swap
+* **Hot code-swap**
   
   Showing a simple way to update an implementation at run time, using the PluginWatcher
 

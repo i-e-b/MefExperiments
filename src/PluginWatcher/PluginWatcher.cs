@@ -1,42 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.Composition;
-using System.ComponentModel.Composition.Hosting;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Threading;
-
-namespace PluginWatcher
+﻿namespace PluginWatcher
 {
-    /// <summary>
-    /// Watch for changes to a plugin directory for a specific MEF Import type.
-    /// <para>Keeps a list of last seen exports and exposes a change event</para>
-    /// </summary>
-    /// <typeparam name="T">Plugin type. Plugins should contain classes implementing this type and decorated with [Export(typeof(...))]</typeparam>
-    public interface IPluginWatcher<T> : IDisposable
-    {
-        /// <summary>
-        /// Available Exports matching type <typeparamref name="T"/> have changed
-        /// </summary>
-        event EventHandler<PluginsChangedEventArgs<T>> PluginsChanged;
-
-        /// <summary>
-        /// Last known Exports matching type <typeparamref name="T"/>.
-        /// </summary>
-        IEnumerable<T> CurrentlyAvailable { get; }
-    }
-
-    /// <summary>
-    /// Event arguments relating to a change in available MEF Export types.
-    /// </summary>
-    public class PluginsChangedEventArgs<T>: EventArgs
-    {
-        /// <summary>
-        /// Last known Exports matching type <typeparamref name="T"/>.
-        /// </summary>
-        public IEnumerable<T> AvailablePlugins { get; set; }
-    }
+    using System;
+    using System.Collections.Generic;
+    using System.ComponentModel.Composition;
+    using System.ComponentModel.Composition.Hosting;
+    using System.IO;
+    using System.Linq;
+    using System.Reflection;
+    using System.Threading;
 
     /// <summary>
     /// Watch for changes to a plugin directory for a specific MEF Import type.
@@ -46,20 +17,12 @@ namespace PluginWatcher
     public class PluginWatcher<T> : IPluginWatcher<T>
     {
         private readonly object _compositionLock = new object();
-
-        private FileSystemWatcher _fsw;
-        private DirectoryCatalog _pluginCatalog;
-        private CompositionContainer _container;
-        private AssemblyCatalog _localCatalog;
         private AggregateCatalog _catalog;
 
-        public event EventHandler<PluginsChangedEventArgs<T>> PluginsChanged;
-
-        protected virtual void OnPluginsChanged()
-        {
-            var handler = PluginsChanged;
-            if (handler != null) handler(this, new PluginsChangedEventArgs<T> { AvailablePlugins = CurrentlyAvailable });
-        }
+        private CompositionContainer _container;
+        private FileSystemWatcher _fsw;
+        private AssemblyCatalog _localCatalog;
+        private DirectoryCatalog _pluginCatalog;
 
         public PluginWatcher(string pluginDirectory)
         {
@@ -88,10 +51,24 @@ namespace PluginWatcher
             ReadLoadedPlugins();
         }
 
+        ~PluginWatcher()
+        {
+            Dispose(true);
+        }
+
+        public event EventHandler<PluginsChangedEventArgs<T>> PluginsChanged;
+        public IEnumerable<T> CurrentlyAvailable { get; protected set; }
+
+        protected virtual void OnPluginsChanged()
+        {
+            var handler = PluginsChanged;
+            if (handler != null) handler(this, new PluginsChangedEventArgs<T> { AvailablePlugins = CurrentlyAvailable });
+        }
+
         private void SetupFileWatcher()
         {
             _fsw.NotifyFilter = NotifyFilters.Attributes | NotifyFilters.CreationTime | NotifyFilters.FileName |
-                                NotifyFilters.LastAccess | NotifyFilters.LastWrite    | NotifyFilters.Size     | NotifyFilters.Security;
+                                NotifyFilters.LastAccess | NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.Security;
 
             _fsw.Changed += FileAddedOrRemoved;
             _fsw.Created += FileAddedOrRemoved;
@@ -142,12 +119,6 @@ namespace PluginWatcher
             }
         }
 
-        public IEnumerable<T> CurrentlyAvailable { get; protected set; }
-
-        ~PluginWatcher()
-        {
-            Dispose(true);
-        }
         public void Dispose()
         {
             Dispose(true);

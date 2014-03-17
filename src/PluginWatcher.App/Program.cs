@@ -1,10 +1,11 @@
-﻿using System;
-using System.Linq;
-using System.Threading;
-using PluginWatcher.Contracts;
-
-namespace PluginWatcher
+﻿namespace PluginWatcherApp
 {
+    using System;
+    using System.Linq;
+    using System.Threading;
+    using PluginWatcher;
+    using PluginWatcher.Contracts;
+
     public class Program
     {
         static void Main()

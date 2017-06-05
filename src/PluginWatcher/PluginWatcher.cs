@@ -61,8 +61,7 @@
 
         protected virtual void OnPluginsChanged()
         {
-            var handler = PluginsChanged;
-            if (handler != null) handler(this, new PluginsChangedEventArgs<T> { AvailablePlugins = CurrentlyAvailable });
+            PluginsChanged?.Invoke(this, new PluginsChangedEventArgs<T> { AvailablePlugins = CurrentlyAvailable });
         }
 
         private void SetupFileWatcher()
@@ -107,11 +106,18 @@
             try
             {
                 var cat = _pluginCatalog;
-                if (cat == null) { return; }
+                if (cat == null)
+                {
+                    return;
+                }
                 lock (_compositionLock)
                 {
                     cat.Refresh();
                 }
+            }
+            catch (InvalidOperationException ioex)
+            {
+                Console.WriteLine("Could not find plugins: " + ioex);
             }
             catch (ChangeRejectedException rejex)
             {
@@ -124,6 +130,7 @@
             Dispose(true);
             GC.SuppressFinalize(this);
         }
+
         protected void Dispose(bool disposing)
         {
             if (!disposing) return;

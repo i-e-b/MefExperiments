@@ -19,13 +19,16 @@
             IPluginWatcher<ISimpleTask> watcher = new PluginWatcher<ISimpleTask>("./Plugins");
             watcher.PluginsChanged += watcher_PluginsChanged;
 
-            current = Latest(watcher.CurrentlyAvailable);
+            lock (VersionLock)
+            {
+                current = Latest(watcher.CurrentlyAvailable);
 
-            Console.WriteLine("\r\nInitial startup\r\nLatest version:");
-            Console.WriteLine(current.Version());
+                Console.WriteLine("\r\nInitial startup\r\nLatest version:");
+                Console.WriteLine(current.Version());
 
-            // Here we set some state that should be maintained between versions
-            current.SetGreets("Hello");
+                // Here we set some state that should be maintained between versions
+                current.SetGreets("Hello");
+            }
 
             do
             {
@@ -67,7 +70,14 @@
         static void watcher_PluginsChanged(object sender, PluginsChangedEventArgs<ISimpleTask> e)
         {
             var latest = Latest(e.AvailablePlugins);
-            if (latest.Version() > current.Version()) Upgrade(current, latest);
+            lock (VersionLock)
+            {
+                if (latest.Version() > current.Version()) Upgrade(current, latest);
+                
+                Console.SetCursorPosition(0, 3);
+                Console.WriteLine("Latest version:");
+                Console.WriteLine(current.Version());
+            }
         }
 
         /// <summary>

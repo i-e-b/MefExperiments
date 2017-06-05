@@ -2,7 +2,7 @@
 {
     using System;
     using System.ComponentModel.Composition;
-    using HotSwap.Contracts;
+    using Contracts;
 
     [Export(typeof(ISimpleTask))]
     public class Version1 : ISimpleTask
